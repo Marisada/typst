@@ -13,6 +13,13 @@ use typst::text::Lang;
 use crate::WithEverything;
 use crate::{hash_base64, outline, page::PdfPageLabel};
 
+pub struct PdfSig {
+    pub name: String,
+    pub location: String,
+    pub reason: String,
+    pub contact_info: String,
+}
+
 /// Write the document catalog.
 pub fn write_catalog(
     ctx: WithEverything,
@@ -20,6 +27,7 @@ pub fn write_catalog(
     timestamp: Option<Datetime>,
     pdf: &mut Pdf,
     alloc: &mut Ref,
+    signer: Option<PdfSig>,
 ) {
     let lang = ctx
         .resources
@@ -83,9 +91,10 @@ pub fn write_catalog(
         xmp.pdf_keywords(&joined);
     }
 
-    if let Some(date) = ctx.document.date.unwrap_or(timestamp) {
+    let create_date = if let Some(date) = ctx.document.date.unwrap_or(timestamp) {
         let tz = ctx.document.date.is_auto();
-        if let Some(pdf_date) = pdf_date(date, tz) {
+        let pdf_date_opt = pdf_date(date, tz);
+        if let Some(pdf_date) = pdf_date_opt {
             info.creation_date(pdf_date);
             info.modified_date(pdf_date);
         }
@@ -93,7 +102,8 @@ pub fn write_catalog(
             xmp.create_date(xmp_date);
             xmp.modify_date(xmp_date);
         }
-    }
+        pdf_date_opt
+    } else {None};
 
     info.finish();
     xmp.num_pages(ctx.document.pages.len() as u32);
@@ -167,7 +177,58 @@ pub fn write_catalog(
         catalog.lang(TextStr(lang.as_str()));
     }
 
-    catalog.finish();
+    // this SIG need post processing
+    // - fill sig_content with hash of pdf-finished bytes before and after sig_content  
+    // - change ByteRange to match actual sig position
+    if let (Some(sig), Some(date_pdf)) = (signer, create_date) {
+        if let Some(Some(first_page_id)) = ctx.globals.pages.iter().find(|page| page.is_some()) {
+            
+            let widget_id = alloc.bump();
+            let sig_id = alloc.bump();
+
+            let mut sig_contents = [0u8;14443];
+            sig_contents[0] = 40;
+            sig_contents[1] = 41;
+
+            catalog.insert(Name(b"Perms")).dict().pair(Name(b"DocMDP"), sig_id);
+    
+            let mut acro_form = catalog.insert(Name(b"AcroForm")).dict();
+            acro_form.pair(Name(b"SigFlags"), 3)
+                .insert(Name(b"Fields")).array().item(widget_id);
+            acro_form.finish();
+            catalog.finish();
+    
+            pdf.indirect(widget_id).dict()
+                .pair(Name(b"F"), 130)
+                .pair(Name(b"Type"), Name(b"Annot"))
+                .pair(Name(b"SubType"), Name(b"Widget"))
+                .pair(Name(b"Rect"), pdf_writer::Rect::new(0.0, 0.0, 0.0, 0.0))
+                .pair(Name(b"FT"), Name(b"Sig"))
+                .pair(Name(b"V"), sig_id)
+                .pair(Name(b"T"), TextStr("Signature"))
+                .pair(Name(b"P"), first_page_id);
+    
+            pdf.indirect(sig_id).dict()
+                .pair(Name(b"Type"), Name(b"Sig"))
+                .pair(Name(b"Filter"), Name(b"Adobe.PPKLite"))
+                .pair(Name(b"SubFilter"), Name(b"adbe.pkcs7.detached"))
+                .pair(Name(b"M"), date_pdf) 
+                .pair(Name(b"Name"), TextStr(sig.name.as_str()))
+                .pair(Name(b"Location"), TextStr(sig.location.as_str()))
+                .pair(Name(b"Reason"), TextStr(sig.reason.as_str()))
+                .pair(Name(b"ContactInfo"), TextStr(sig.contact_info.as_str()))
+                .pair(Name(b"Contents"), Str(&sig_contents))
+                .pair(Name(b"ByteRange"), pdf_writer::Rect::new(88888888.0, 88888888.0, 88888888.0, 88888888.0))
+                .insert(Name(b"Reference")).array().push().dict()
+                    .pair(Name(b"Type"), Name(b"SigRef"))
+                    .pair(Name(b"Data"), catalog_ref)
+                    .pair(Name(b"TransformMethod"), Name(b"DocMDP"))
+                    .insert(Name(b"TransformParams")).dict()
+                        .pair(Name(b"Type"), Name(b"TransformParams"))
+                        .pair(Name(b"V"), Name(b"1.2"))
+                        .pair(Name(b"P"), 1);
+        }
+    }
 }
 
 /// Write the page labels.
