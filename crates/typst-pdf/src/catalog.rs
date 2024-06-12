@@ -13,6 +13,7 @@ use typst::text::Lang;
 use crate::WithEverything;
 use crate::{hash_base64, outline, page::PdfPageLabel};
 
+#[derive(Clone)]
 pub struct PdfSig {
     pub name: String,
     pub location: String,
@@ -187,8 +188,10 @@ pub fn write_catalog(
             let sig_id = alloc.bump();
 
             let mut sig_contents = [0u8;14443];
-            sig_contents[0] = 40;
-            sig_contents[1] = 41;
+            sig_contents[0] = 190;
+            sig_contents[1] = 239;
+            sig_contents[2] = 250;
+            sig_contents[3] = 206;
 
             catalog.insert(Name(b"Perms")).dict().pair(Name(b"DocMDP"), sig_id);
     
