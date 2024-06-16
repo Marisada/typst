@@ -178,20 +178,32 @@ pub fn write_catalog(
         catalog.lang(TextStr(lang.as_str()));
     }
 
-    // this SIG need post processing
-    // - fill sig_content with hash of pdf-finished bytes before and after sig_content  
-    // - change ByteRange to match actual sig position
+    // we create a placeholder for Contents and ByteRange here
+    // then we will post-processing (after write to PDF binary) later.
+    // post-processing includes
+    // 1. update ByteRange to match actual signature content position then
+    // 2. fill Contents with digest from 2 parts of bytes concatenated (not included '<' and '>')
+    //   2.1 from BOF to before '<BEEFFACE00..00>'
+    //   2.2 after '<BEEFFACE00..00>' to EOF
+    // *Note*: 'BEEFFACE' and '88888888' just hex text for seeking position only 
+    // *NOTE*: please use the same Contents length in post-processing function
     if let (Some(sig), Some(date_pdf)) = (signer, create_date) {
         if let Some(Some(first_page_id)) = ctx.globals.pages.iter().find(|page| page.is_some()) {
             
             let widget_id = alloc.bump();
             let sig_id = alloc.bump();
-
-            let mut sig_contents = [0u8;14443];
-            sig_contents[0] = 190;
-            sig_contents[1] = 239;
-            sig_contents[2] = 250;
-            sig_contents[3] = 206;
+            // we need signature Contents from [cryptographic_message_syntax](https://github.com/indygreg/cryptography-rs)
+            // to overwrite 'BEEFFACE00..00' later
+            // cryptographic_message_syntax::signing::SignedDataBuilder::build_der() will return Vec<u8>
+            // - rsa:4096 sha256: ~2,000 bytes
+            // - timestamp: ~5,500 bytes
+            // so 'BEEFFACE00..00' length should be >10,000 bytes (>20,000 hex string chars)
+            // pdf_writer will generate '<BEEFFACE00..00>' from [190,239,250,206,0,0,..,0,0]
+            let mut sig_contents = [0u8;11110];
+            sig_contents[0] = 190; // BE
+            sig_contents[1] = 239; // EF
+            sig_contents[2] = 250; // FA
+            sig_contents[3] = 206; // CE
 
             catalog.insert(Name(b"Perms")).dict().pair(Name(b"DocMDP"), sig_id);
     
@@ -221,6 +233,8 @@ pub fn write_catalog(
                 .pair(Name(b"Reason"), TextStr(sig.reason.as_str()))
                 .pair(Name(b"ContactInfo"), TextStr(sig.contact_info.as_str()))
                 .pair(Name(b"Contents"), Str(&sig_contents))
+                // we prepare 37 chars placeholder for ByteRange '[0 x x x]' 
+                // so max unit is '[0 0123456789 0123456789a 0123456789]'
                 .pair(Name(b"ByteRange"), pdf_writer::Rect::new(88888888.0, 88888888.0, 88888888.0, 88888888.0))
                 .insert(Name(b"Reference")).array().push().dict()
                     .pair(Name(b"Type"), Name(b"SigRef"))
