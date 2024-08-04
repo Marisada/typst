@@ -14,6 +14,8 @@ mod page;
 mod pattern;
 mod resources;
 
+pub use catalog::PdfSig;
+
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::ops::{Deref, DerefMut};
@@ -69,6 +71,7 @@ pub fn pdf(
     ident: Smart<&str>,
     timestamp: Option<Datetime>,
     page_ranges: Option<PageRanges>,
+    signer: Option<catalog::PdfSig>,
 ) -> Vec<u8> {
     PdfBuilder::new(document, page_ranges)
         .phase(|builder| builder.run(traverse_pages))
@@ -88,7 +91,7 @@ pub fn pdf(
         })
         .phase(|builder| builder.run(write_page_tree))
         .phase(|builder| builder.run(write_resource_dictionaries))
-        .export_with(ident, timestamp, write_catalog)
+        .export_with(ident, timestamp, write_catalog, signer)
 }
 
 /// A struct to build a PDF following a fixed succession of phases.
@@ -346,11 +349,12 @@ impl<S> PdfBuilder<S> {
         ident: Smart<&str>,
         timestamp: Option<Datetime>,
         process: P,
+        signer: Option<PdfSig>,
     ) -> Vec<u8>
     where
-        P: Fn(S, Smart<&str>, Option<Datetime>, &mut Pdf, &mut Ref),
+        P: Fn(S, Smart<&str>, Option<Datetime>, &mut Pdf, &mut Ref, Option<catalog::PdfSig>),
     {
-        process(self.state, ident, timestamp, &mut self.pdf, &mut self.alloc);
+        process(self.state, ident, timestamp, &mut self.pdf, &mut self.alloc, signer);
         self.pdf.finish()
     }
 }

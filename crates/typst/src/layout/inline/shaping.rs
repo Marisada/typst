@@ -516,7 +516,7 @@ impl<'a> ShapedText<'a> {
         }
 
         let left = self.find_safe_to_break(start, Side::Left)?;
-        let right = self.find_safe_to_break(end, Side::Right)?;
+        let right = self.find_safe_to_break(end, Side::Left)?;
         Some(&self.glyphs[left..right])
     }
 

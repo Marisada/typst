@@ -20,6 +20,7 @@ pub fn write_catalog(
     timestamp: Option<Datetime>,
     pdf: &mut Pdf,
     alloc: &mut Ref,
+    signer: Option<PdfSig>,
 ) {
     let lang = ctx
         .resources
@@ -83,9 +84,10 @@ pub fn write_catalog(
         xmp.pdf_keywords(&joined);
     }
 
-    if let Some(date) = ctx.document.date.unwrap_or(timestamp) {
+    let create_date = if let Some(date) = ctx.document.date.unwrap_or(timestamp) {
         let tz = ctx.document.date.is_auto();
-        if let Some(pdf_date) = pdf_date(date, tz) {
+        let pdf_date_opt = pdf_date(date, tz);
+        if let Some(pdf_date) = pdf_date_opt {
             info.creation_date(pdf_date);
             info.modified_date(pdf_date);
         }
@@ -93,7 +95,8 @@ pub fn write_catalog(
             xmp.create_date(xmp_date);
             xmp.modify_date(xmp_date);
         }
-    }
+        pdf_date_opt
+    } else {None};
 
     info.finish();
     xmp.num_pages(ctx.document.pages.len() as u32);
@@ -167,7 +170,75 @@ pub fn write_catalog(
         catalog.lang(TextStr(lang.as_str()));
     }
 
-    catalog.finish();
+    // we create a placeholder for Contents and ByteRange here
+    // then we will post-processing (after write to PDF binary) later.
+    // post-processing includes
+    // 1. update ByteRange to match actual signature content position then
+    // 2. fill Contents with digest from 2 parts of bytes concatenated (not included '<' and '>')
+    //   2.1 from BOF to before '<BEEFFACE00..00>'
+    //   2.2 after '<BEEFFACE00..00>' to EOF
+    // *Note*: 'BEEFFACE' and '88888888' just hex text for seeking position only 
+    // *NOTE*: please use the same Contents length in post-processing function
+    if let (Some(sig), Some(date_pdf)) = (signer, create_date) {
+        if let Some(Some(first_page_id)) = ctx.globals.pages.iter().find(|page| page.is_some()) {
+            
+            let widget_id = alloc.bump();
+            let sig_id = alloc.bump();
+
+            // we need signature Contents from [cryptographic_message_syntax](https://github.com/indygreg/cryptography-rs)
+            // to overwrite 'BEEFFACE00..00' later
+            // cryptographic_message_syntax::signing::SignedDataBuilder::build_der() will return Vec<u8>
+            // - rsa:4096 sha256: ~2,000 bytes
+            // - timestamp: ~5,500 bytes
+            // so 'BEEFFACE00..00' length should be >10,000 bytes (>20,000 hex string chars)
+            // pdf_writer will generate '<BEEFFACE00..00>' from [190,239,250,206,0,0,..,0,0]
+            let mut sig_contents = [0u8;11110];
+            sig_contents[0] = 190; // BE
+            sig_contents[1] = 239; // EF
+            sig_contents[2] = 250; // FA
+            sig_contents[3] = 206; // CE
+
+            catalog.insert(Name(b"Perms")).dict().pair(Name(b"DocMDP"), sig_id);
+    
+            let mut acro_form = catalog.insert(Name(b"AcroForm")).dict();
+            acro_form.pair(Name(b"SigFlags"), 3)
+                .insert(Name(b"Fields")).array().item(widget_id);
+            acro_form.finish();
+            catalog.finish();
+    
+            pdf.indirect(widget_id).dict()
+                .pair(Name(b"F"), 130)
+                .pair(Name(b"Type"), Name(b"Annot"))
+                .pair(Name(b"SubType"), Name(b"Widget"))
+                .pair(Name(b"Rect"), pdf_writer::Rect::new(0.0, 0.0, 0.0, 0.0))
+                .pair(Name(b"FT"), Name(b"Sig"))
+                .pair(Name(b"V"), sig_id)
+                .pair(Name(b"T"), TextStr("Signature"))
+                .pair(Name(b"P"), first_page_id);
+    
+            pdf.indirect(sig_id).dict()
+                .pair(Name(b"Type"), Name(b"Sig"))
+                .pair(Name(b"Filter"), Name(b"Adobe.PPKLite"))
+                .pair(Name(b"SubFilter"), Name(b"adbe.pkcs7.detached"))
+                .pair(Name(b"M"), date_pdf) 
+                .pair(Name(b"Name"), TextStr(sig.name.as_str()))
+                .pair(Name(b"Location"), TextStr(sig.location.as_str()))
+                .pair(Name(b"Reason"), TextStr(sig.reason.as_str()))
+                .pair(Name(b"ContactInfo"), TextStr(sig.contact_info.as_str()))
+                .pair(Name(b"Contents"), Str(&sig_contents))
+                // we prepare 37 chars placeholder for ByteRange '[0 x x x]' 
+                // so max unit is '[0 0123456789 0123456789a 0123456789]'
+                .pair(Name(b"ByteRange"), pdf_writer::Rect::new(88888888.0, 88888888.0, 88888888.0, 88888888.0))
+                .insert(Name(b"Reference")).array().push().dict()
+                    .pair(Name(b"Type"), Name(b"SigRef"))
+                    .pair(Name(b"Data"), catalog_ref)
+                    .pair(Name(b"TransformMethod"), Name(b"DocMDP"))
+                    .insert(Name(b"TransformParams")).dict()
+                        .pair(Name(b"Type"), Name(b"TransformParams"))
+                        .pair(Name(b"V"), Name(b"1.2"))
+                        .pair(Name(b"P"), 1);
+        }
+    }
 }
 
 /// Write the page labels.
@@ -275,4 +346,12 @@ fn xmp_date(datetime: Datetime, tz: bool) -> Option<xmp_writer::DateTime> {
         second: datetime.second(),
         timezone: if tz { Some(Timezone::Utc) } else { None },
     })
+}
+
+#[derive(Clone)]
+pub struct PdfSig {
+    pub name: String,
+    pub location: String,
+    pub reason: String,
+    pub contact_info: String,
 }

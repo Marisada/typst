@@ -168,7 +168,7 @@ fn export_pdf(document: &Document, command: &CompileCommand) -> StrResult<()> {
         command.common.creation_timestamp.unwrap_or_else(chrono::Utc::now),
     );
     let exported_page_ranges = command.exported_page_ranges();
-    let buffer = typst_pdf::pdf(document, Smart::Auto, timestamp, exported_page_ranges);
+    let buffer = typst_pdf::pdf(document, Smart::Auto, timestamp, exported_page_ranges, None);
     command
         .output()
         .write(&buffer)
