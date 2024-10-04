@@ -197,6 +197,7 @@ fn export_pdf(document: &Document, command: &CompileCommand) -> SourceResult<()>
         ),
         page_ranges: command.exported_page_ranges(),
         standards: command.pdf_standards().at(Span::detached())?,
+        signer: None,
     };
     let buffer = typst_pdf::pdf(document, &options)?;
     command

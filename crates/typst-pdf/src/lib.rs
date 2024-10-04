@@ -14,6 +14,8 @@ mod page;
 mod pattern;
 mod resources;
 
+pub use catalog::PdfSig;
+
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::Hash;
@@ -98,6 +100,7 @@ pub struct PdfOptions<'a> {
     pub page_ranges: Option<PageRanges>,
     /// A list of PDF standards that Typst will enforce conformance with.
     pub standards: PdfStandards,
+    pub signer: Option<catalog::PdfSig>,
 }
 
 /// Encapsulates a list of compatible PDF standards.
