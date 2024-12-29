@@ -290,6 +290,7 @@ fn export_pdf(document: &PagedDocument, config: &CompileConfig) -> SourceResult<
         timestamp,
         page_ranges: config.pages.clone(),
         standards: config.pdf_standards.clone(),
+        signer: None,
     };
     let buffer = typst_pdf::pdf(document, &options)?;
     config
