@@ -87,9 +87,11 @@ pub fn write_catalog(
         xmp.pdf_keywords(&joined);
     }
     let (date, tz) = document_date(ctx.document.info.date, ctx.options.timestamp);
+    let mut create_date = None;
     if let Some(pdf_date) = date.and_then(|date| pdf_date(date, tz)) {
         info.creation_date(pdf_date);
         info.modified_date(pdf_date);
+        create_date = Some(pdf_date);
     }
 
     info.finish();
@@ -229,7 +231,92 @@ pub fn write_catalog(
             .dest_output_profile(ctx.globals.color_functions.srgb.unwrap());
     }
 
-    catalog.finish();
+    // we create a placeholder for Contents and ByteRange here
+    // then we will post-processing (after write to PDF binary) later.
+    // post-processing includes
+    // 1. update ByteRange to match actual signature content position then
+    // 2. fill Contents with digest from 2 parts of bytes concatenated (not included '<' and '>')
+    //   2.1 from BOF to before '<BEEFFACE00..00>'
+    //   2.2 after '<BEEFFACE00..00>' to EOF
+    // *Note*: 'BEEFFACE' and '88888888' just hex text for seeking position only
+    // *NOTE*: please use the same Contents length in post-processing function
+    if let (Some(sig), Some(date_pdf)) = (ctx.options.signer.as_ref(), create_date) {
+        if let Some(Some(first_page_id)) =
+            ctx.globals.pages.iter().find(|page| page.is_some())
+        {
+            let widget_id = alloc.bump();
+            let sig_id = alloc.bump();
+
+            // we need signature Contents from [cryptographic_message_syntax](https://github.com/indygreg/cryptography-rs)
+            // to overwrite 'BEEFFACE00..00' later
+            // cryptographic_message_syntax::signing::SignedDataBuilder::build_der() will return Vec<u8>
+            // - rsa:4096 sha256: ~2,000 bytes
+            // - timestamp: ~5,500 bytes
+            // so 'BEEFFACE00..00' length should be >10,000 bytes (>20,000 hex string chars)
+            // pdf_writer will generate '<BEEFFACE00..00>' from [190,239,250,206,0,0,..,0,0]
+            let mut sig_contents = [0u8; 11110];
+            sig_contents[0] = 190; // BE
+            sig_contents[1] = 239; // EF
+            sig_contents[2] = 250; // FA
+            sig_contents[3] = 206; // CE
+
+            catalog.insert(Name(b"Perms")).dict().pair(Name(b"DocMDP"), sig_id);
+
+            let mut acro_form = catalog.insert(Name(b"AcroForm")).dict();
+            acro_form
+                .pair(Name(b"SigFlags"), 3)
+                .insert(Name(b"Fields"))
+                .array()
+                .item(widget_id);
+            acro_form.finish();
+            catalog.finish();
+
+            pdf.indirect(widget_id)
+                .dict()
+                .pair(Name(b"F"), 130)
+                .pair(Name(b"Type"), Name(b"Annot"))
+                .pair(Name(b"SubType"), Name(b"Widget"))
+                .pair(Name(b"Rect"), pdf_writer::Rect::new(0.0, 0.0, 0.0, 0.0))
+                .pair(Name(b"FT"), Name(b"Sig"))
+                .pair(Name(b"V"), sig_id)
+                .pair(Name(b"T"), TextStr("Signature"))
+                .pair(Name(b"P"), first_page_id);
+
+            pdf.indirect(sig_id)
+                .dict()
+                .pair(Name(b"Type"), Name(b"Sig"))
+                .pair(Name(b"Filter"), Name(b"Adobe.PPKLite"))
+                .pair(Name(b"SubFilter"), Name(b"adbe.pkcs7.detached"))
+                .pair(Name(b"M"), date_pdf)
+                .pair(Name(b"Name"), TextStr(sig.name.as_str()))
+                .pair(Name(b"Location"), TextStr(sig.location.as_str()))
+                .pair(Name(b"Reason"), TextStr(sig.reason.as_str()))
+                .pair(Name(b"ContactInfo"), TextStr(sig.contact_info.as_str()))
+                .pair(Name(b"Contents"), Str(&sig_contents))
+                // we prepare 37 chars placeholder for ByteRange '[0 x x x]'
+                // so max unit is '[0 0123456789 0123456789a 0123456789]'
+                .pair(
+                    Name(b"ByteRange"),
+                    pdf_writer::Rect::new(88888888.0, 88888888.0, 88888888.0, 88888888.0),
+                )
+                .insert(Name(b"Reference"))
+                .array()
+                .push()
+                .dict()
+                .pair(Name(b"Type"), Name(b"SigRef"))
+                .pair(Name(b"Data"), catalog_ref)
+                .pair(Name(b"TransformMethod"), Name(b"DocMDP"))
+                .insert(Name(b"TransformParams"))
+                .dict()
+                .pair(Name(b"Type"), Name(b"TransformParams"))
+                .pair(Name(b"V"), Name(b"1.2"))
+                .pair(Name(b"P"), 1);
+        } else {
+            catalog.finish();
+        }
+    } else {
+        catalog.finish();
+    }
 
     if ctx.options.standards.pdfa && pdf.refs().count() > 8388607 {
         bail!(Span::detached(), "too many PDF objects");
@@ -382,4 +469,12 @@ fn xmp_date(
         second: datetime.second(),
         timezone,
     })
+}
+
+#[derive(Clone, Debug)]
+pub struct PdfSig {
+    pub name: String,
+    pub location: String,
+    pub reason: String,
+    pub contact_info: String,
 }

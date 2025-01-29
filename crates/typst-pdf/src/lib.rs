@@ -15,6 +15,8 @@ mod page;
 mod resources;
 mod tiling;
 
+pub use catalog::PdfSig;
+
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::{self, Debug, Formatter};
 use std::hash::Hash;
@@ -101,6 +103,7 @@ pub struct PdfOptions<'a> {
     pub page_ranges: Option<PageRanges>,
     /// A list of PDF standards that Typst will enforce conformance with.
     pub standards: PdfStandards,
+    pub signer: Option<catalog::PdfSig>,
 }
 
 /// A timestamp with timezone information.
