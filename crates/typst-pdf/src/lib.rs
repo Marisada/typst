@@ -1,4 +1,5 @@
 //! Exporting of Typst documents into PDFs.
+pub use catalog::PdfSig;
 
 mod catalog;
 mod color;
@@ -101,6 +102,7 @@ pub struct PdfOptions<'a> {
     pub page_ranges: Option<PageRanges>,
     /// A list of PDF standards that Typst will enforce conformance with.
     pub standards: PdfStandards,
+    pub signer: Option<catalog::PdfSig>,
 }
 
 /// A timestamp with timezone information.
