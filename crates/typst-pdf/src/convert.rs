@@ -66,6 +66,9 @@ pub fn convert(
 
     document.set_outline(build_outline(&gc));
     document.set_metadata(build_metadata(&gc));
+    if let Some(sig) = &options.signer {
+        document.set_signer(sig.clone());
+    }
 
     finish(document, gc, options.standards.config)
 }
