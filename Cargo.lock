@@ -1214,6 +1214,7 @@ dependencies = [
  "byteorder-lite",
  "color_quant",
  "gif",
+ "image-webp",
  "num-traits",
  "png",
  "zune-core",
@@ -1366,6 +1367,7 @@ dependencies = [
 [[package]]
 name = "krilla"
 version = "0.4.0"
+source = "git+https://github.com/Marisada/krilla?rev=e9e96d12e#e9e96d12e5c1c22d9169f56b38b3c092956cfe1c"
 dependencies = [
  "base64",
  "bumpalo",
@@ -1393,6 +1395,7 @@ dependencies = [
 [[package]]
 name = "krilla-svg"
 version = "0.1.0"
+source = "git+https://github.com/Marisada/krilla?rev=e9e96d12e#e9e96d12e5c1c22d9169f56b38b3c092956cfe1c"
 dependencies = [
  "flate2",
  "fontdb",
