@@ -73,8 +73,10 @@ image = { version = "0.25.5", default-features = false, features = ["png", "jpeg
 indexmap = { version = "2", features = ["serde"] }
 infer = { version = "0.19.0", default-features = false }
 kamadak-exif = "0.6"
-krilla = { version = "0.4.0", default-features = false, features = ["raster-images", "comemo", "rayon"] }
-krilla-svg = "0.1.0"
+# krilla = { version = "0.4.0", default-features = false, features = ["raster-images", "comemo", "rayon"] }
+# krilla-svg = "0.1.0"
+krilla = { git = "https://github.com/Marisada/krilla", rev = "e9e96d12e", default-features = false, features = ["raster-images", "comemo", "rayon"] }
+krilla-svg = { git = "https://github.com/Marisada/krilla", rev = "e9e96d12e" }
 kurbo = "0.11"
 libfuzzer-sys = "0.4"
 lipsum = "0.9"
@@ -142,7 +144,7 @@ xmlparser = "0.13.5"
 xmlwriter = "0.1.0"
 xz2 = { version = "0.1", features = ["static"] }
 yaml-front-matter = "0.1"
-zip = { version = "2.5", default-features = false, features = ["deflate"] }
+zip = { version = "4", default-features = false, features = ["deflate"] }
 
 [profile.dev.package."*"]
 opt-level = 2
