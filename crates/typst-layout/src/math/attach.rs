@@ -293,6 +293,7 @@ fn layout_attachments(
 /// post-script extends left of the base's width and second containing the
 /// post-script's kerning value. The first tuple is for the post-superscript,
 /// and the second is for the post-subscript.
+#[allow(unstable_name_collisions)]
 fn compute_post_script_widths(
     base: &MathFragment,
     [tr, br]: [Option<&MathFragment>; 2],
@@ -322,6 +323,7 @@ fn compute_post_script_widths(
 /// Returns two lengths, the first being the distance the pre-superscript
 /// extends left of the base's width and the second being the distance the
 /// pre-subscript extends left of the base's width.
+#[allow(unstable_name_collisions)]
 fn compute_pre_script_widths(
     base: &MathFragment,
     [tl, bl]: [Option<&MathFragment>; 2],
@@ -348,6 +350,7 @@ fn compute_pre_script_widths(
 /// limit extends leftward beyond the base's width and second containing the
 /// distance the limit extends rightward beyond the base's width. The first
 /// tuple is for the upper-limit, and the second is for the lower-limit.
+#[allow(unstable_name_collisions)]
 fn compute_limit_widths(
     base: &MathFragment,
     [t, b]: [Option<&MathFragment>; 2],
@@ -372,6 +375,7 @@ fn compute_limit_widths(
 /// Calculate the distance from the base's baseline to each limit's baseline.
 /// Returns two lengths, the first being the distance to the upper-limit's
 /// baseline and the second being the distance to the lower-limit's baseline.
+#[allow(unstable_name_collisions)]
 fn compute_limit_shifts(
     font: &Font,
     font_size: Abs,
