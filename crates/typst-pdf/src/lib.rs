@@ -14,6 +14,7 @@ mod text;
 mod util;
 
 pub use self::metadata::{Timestamp, Timezone};
+pub use krilla::metadata::PdfSig;
 
 use std::fmt::{self, Debug, Formatter};
 
@@ -66,6 +67,7 @@ pub struct PdfOptions<'a> {
     /// circumstances, for example when trying to reduce the size of a document,
     /// it can be desirable to disable tagged PDF.
     pub tagged: bool,
+    pub signer: Option<PdfSig>,
 }
 
 impl PdfOptions<'_> {
@@ -84,6 +86,7 @@ impl Default for PdfOptions<'_> {
             page_ranges: None,
             standards: PdfStandards::default(),
             tagged: true,
+            signer: None,
         }
     }
 }
