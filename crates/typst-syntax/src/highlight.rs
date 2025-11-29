@@ -375,9 +375,7 @@ pub fn highlight_html(root: &SyntaxNode) -> String {
 /// Highlight one source node, emitting HTML.
 fn highlight_html_impl(html: &mut String, node: &LinkedNode) {
     let mut span = false;
-    if let Some(tag) = highlight(node)
-        && tag != Tag::Error
-    {
+    if let Some(tag) = highlight(node) {
         span = true;
         html.push_str("<span class=\"");
         html.push_str(tag.css_class());

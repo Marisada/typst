@@ -129,7 +129,13 @@ fn convert_pattern(
     let mut stream_builder = surface.stream_builder();
     let mut surface = stream_builder.surface();
     tags::tiling(gc, &mut surface, |gc, surface| {
-        let mut fc = FrameContext::new(None, pattern.frame().size());
+        let frame_size = pattern.frame().size();
+        let size = krilla::geom::Size::from_wh(
+            frame_size.x.to_pt() as f32,
+            frame_size.y.to_pt() as f32,
+        )
+        .unwrap();
+        let mut fc = FrameContext::new(None, size);
         handle_frame(&mut fc, pattern.frame(), None, surface, gc)
     })?;
     surface.finish();
@@ -151,7 +157,10 @@ fn convert_gradient(
     size: Size,
 ) -> (krilla::paint::Paint, u8) {
     let size = match gradient.unwrap_relative(on_text) {
-        RelativeTo::Self_ => size,
+        RelativeTo::Self_ => {
+            krilla::geom::Size::from_wh(size.x.to_pt() as f32, size.y.to_pt() as f32)
+                .unwrap()
+        }
         RelativeTo::Parent => state.container_size(),
     };
 
@@ -160,7 +169,8 @@ fn convert_gradient(
     let stops = convert_gradient_stops(gradient);
     match &gradient {
         Gradient::Linear(_) => {
-            angle = Gradient::correct_aspect_ratio(angle, size.aspect_ratio());
+            let aspect_ratio = Ratio::new(size.width() as f64 / size.height() as f64);
+            angle = Gradient::correct_aspect_ratio(angle, aspect_ratio);
             let (x1, y1, x2, y2) = {
                 let (mut sin, mut cos) = (angle.sin(), angle.cos());
 
@@ -185,8 +195,8 @@ fn convert_gradient(
                 // x and y coordinates are normalized, so need to scale by the size.
                 transform: base_transform
                     .pre_concat(Transform::scale(
-                        Ratio::new(size.x.to_f32() as f64),
-                        Ratio::new(size.y.to_f32() as f64),
+                        Ratio::new(size.width() as f64),
+                        Ratio::new(size.height() as f64),
                     ))
                     .to_krilla(),
                 spread_method: SpreadMethod::Pad,
@@ -206,8 +216,8 @@ fn convert_gradient(
                 cr: radial.radius.get() as f32,
                 transform: base_transform
                     .pre_concat(Transform::scale(
-                        Ratio::new(size.x.to_f32() as f64),
-                        Ratio::new(size.y.to_f32() as f64),
+                        Ratio::new(size.width() as f64),
+                        Ratio::new(size.height() as f64),
                     ))
                     .to_krilla(),
                 spread_method: SpreadMethod::Pad,
@@ -219,8 +229,8 @@ fn convert_gradient(
         }
         Gradient::Conic(conic) => {
             // Correct the gradient's angle.
-            let cx = size.x.to_f32() * conic.center.x.get() as f32;
-            let cy = size.y.to_f32() * conic.center.y.get() as f32;
+            let cx = size.width() * conic.center.x.get() as f32;
+            let cy = size.height() * conic.center.y.get() as f32;
             let actual_transform = base_transform
                 // Adjust for the angle.
                 .pre_concat(Transform::rotate_at(

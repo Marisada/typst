@@ -4,7 +4,7 @@ use krilla::configure::{Configuration, ValidationError, Validator};
 use krilla::destination::NamedDestination;
 use krilla::embed::EmbedError;
 use krilla::error::KrillaError;
-use krilla::geom::PathBuilder;
+use krilla::geom::{PathBuilder, Size};
 use krilla::page::{PageLabel, PageSettings};
 use krilla::pdf::PdfError;
 use krilla::surface::Surface;
@@ -15,9 +15,7 @@ use smallvec::SmallVec;
 use typst_library::diag::{SourceDiagnostic, SourceResult, bail, error};
 use typst_library::foundations::{NativeElement, Repr};
 use typst_library::introspection::{Location, Tag};
-use typst_library::layout::{
-    Frame, FrameItem, GroupItem, PagedDocument, Size, Transform,
-};
+use typst_library::layout::{Frame, FrameItem, GroupItem, PagedDocument, Transform};
 use typst_library::model::HeadingElem;
 use typst_library::text::Font;
 use typst_library::visualize::{Geometry, Paint};
@@ -72,6 +70,9 @@ pub fn convert(
     document.set_outline(build_outline(&gc));
     document.set_metadata(build_metadata(&gc, doc_lang));
     document.set_tag_tree(tree);
+    if let Some(sig) = &options.signer {
+        document.set_signer(sig.clone());
+    }
 
     finish(document, gc, options.standards.config)
 }
@@ -87,8 +88,11 @@ fn convert_pages(gc: &mut GlobalContext, document: &mut Document) -> SourceResul
         // PDF 2.0 doesn't define an explicit limit, but krilla and probably
         // some viewers won't handle pages that have zero sized pages.
         let mut settings = PageSettings::new(
-            typst_page.frame.width().to_f32().max(3.0),
-            typst_page.frame.height().to_f32().max(3.0),
+            Size::from_wh(
+                typst_page.frame.width().to_f32().max(3.0),
+                typst_page.frame.height().to_f32().max(3.0),
+            )
+            .unwrap(),
         );
 
         if let Some(label) = typst_page
@@ -114,7 +118,13 @@ fn convert_pages(gc: &mut GlobalContext, document: &mut Document) -> SourceResul
         let mut page = document.start_page_with(settings);
         let mut surface = page.surface();
         let page_idx = gc.page_index_converter.pdf_page_index(i);
-        let mut fc = FrameContext::new(page_idx, typst_page.frame.size());
+        let frame_size = typst_page.frame.size();
+        let size = krilla::geom::Size::from_wh(
+            frame_size.x.to_pt() as f32,
+            frame_size.y.to_pt() as f32,
+        )
+        .unwrap();
+        let mut fc = FrameContext::new(page_idx, size);
 
         tags::page(gc, &mut surface, |gc, surface| {
             handle_frame(
@@ -288,7 +298,13 @@ pub(crate) fn handle_frame(
     fc.push();
 
     if frame.kind().is_hard() {
-        fc.state_mut().register_container(frame.size());
+        let frame_size = frame.size();
+        let size = krilla::geom::Size::from_wh(
+            frame_size.x.to_pt() as f32,
+            frame_size.y.to_pt() as f32,
+        )
+        .unwrap();
+        fc.state_mut().register_container(size);
     }
 
     if let Some(fill) = fill {
