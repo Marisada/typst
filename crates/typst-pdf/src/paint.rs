@@ -131,8 +131,8 @@ fn convert_pattern(
     tags::tiling(gc, &mut surface, |gc, surface| {
         let frame_size = pattern.frame().size();
         let size = krilla::geom::Size::from_wh(
-            frame_size.x.to_pt() as f32,
-            frame_size.y.to_pt() as f32,
+            frame_size.x.to_pt().max(3.0) as f32,
+            frame_size.y.to_pt().max(3.0) as f32,
         )
         .unwrap();
         let mut fc = FrameContext::new(None, size);
@@ -158,7 +158,7 @@ fn convert_gradient(
 ) -> (krilla::paint::Paint, u8) {
     let size = match gradient.unwrap_relative(on_text) {
         RelativeTo::Self_ => {
-            krilla::geom::Size::from_wh(size.x.to_pt() as f32, size.y.to_pt() as f32)
+            krilla::geom::Size::from_wh(size.x.to_pt().max(3.0) as f32, size.y.to_pt().max(3.0) as f32)
                 .unwrap()
         }
         RelativeTo::Parent => state.container_size(),

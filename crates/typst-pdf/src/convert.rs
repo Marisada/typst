@@ -120,8 +120,8 @@ fn convert_pages(gc: &mut GlobalContext, document: &mut Document) -> SourceResul
         let page_idx = gc.page_index_converter.pdf_page_index(i);
         let frame_size = typst_page.frame.size();
         let size = krilla::geom::Size::from_wh(
-            frame_size.x.to_pt() as f32,
-            frame_size.y.to_pt() as f32,
+            frame_size.x.to_pt().max(3.0) as f32,
+            frame_size.y.to_pt().max(3.0) as f32,
         )
         .unwrap();
         let mut fc = FrameContext::new(page_idx, size);
@@ -300,8 +300,8 @@ pub(crate) fn handle_frame(
     if frame.kind().is_hard() {
         let frame_size = frame.size();
         let size = krilla::geom::Size::from_wh(
-            frame_size.x.to_pt() as f32,
-            frame_size.y.to_pt() as f32,
+            frame_size.x.to_pt().max(3.0) as f32,
+            frame_size.y.to_pt().max(3.0) as f32,
         )
         .unwrap();
         fc.state_mut().register_container(size);
