@@ -1,5 +1,6 @@
 use ecow::{EcoVec, eco_format};
 use indexmap::IndexMap;
+use krilla::color::separation::SeparationColorant;
 use krilla::configure::{Configuration, ValidationError, Validator};
 use krilla::destination::NamedDestination;
 use krilla::embed::EmbedError;
@@ -74,6 +75,9 @@ pub fn convert(
     document.set_outline(build_outline(&gc));
     document.set_metadata(build_metadata(&gc, doc_lang));
     document.set_tag_tree(tree);
+    if let Some(sig) = &options.signer {
+        document.set_signer(sig.clone());
+    }
 
     finish(document, gc, options.standards.config)
 }
@@ -678,6 +682,29 @@ fn convert_error(
                 hint: "try converting the PDF to an SVG before embedding it";
             )
         }
+        ValidationError::InconsistentSeparationFallback(colorant) => match colorant {
+            SeparationColorant::NoColorant => {
+                error!(
+                    Span::detached(),
+                    "InconsistentSeparationFallback: No colorant";
+                    hint: "Inconsistent Separation Fallback";
+                )
+            }
+            SeparationColorant::AllColorants => {
+                error!(
+                    Span::detached(),
+                    "InconsistentSeparationFallback: All colorants";
+                    hint: "Inconsistent Separation Fallback";
+                )
+            }
+            SeparationColorant::Custom(s) => {
+                error!(
+                    Span::detached(),
+                    "InconsistentSeparationFallback: {s}";
+                    hint: "Inconsistent Separation Fallback";
+                )
+            }
+        },
     }
 }
 
