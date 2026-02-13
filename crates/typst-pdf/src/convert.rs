@@ -74,6 +74,9 @@ pub fn convert(
     document.set_outline(build_outline(&gc));
     document.set_metadata(build_metadata(&gc, doc_lang));
     document.set_tag_tree(tree);
+    if let Some(sig) = &options.signer {
+        document.set_signer(sig.clone());
+    }
 
     finish(document, gc, options.standards.config)
 }
@@ -678,6 +681,11 @@ fn convert_error(
                 hint: "try converting the PDF to an SVG before embedding it";
             )
         }
+        ValidationError::InconsistentSeparationFallback(_) => error!(
+            Span::detached(),
+            "{prefix} using the same Separation colorant with multiple different fallback colors";
+            hint: "use the same colorant and fallback color";
+        ),
     }
 }
 

@@ -399,14 +399,7 @@ fn svg_header_with_custom_attrs(
     svg.attr_with("viewBox", |attr| {
         attr.push_nums([0.0, 0.0, size.x.to_pt(), size.y.to_pt()])
     });
-    svg.attr_with("width", |attr| {
-        attr.push_num(size.x.to_pt());
-        attr.push_str("pt");
-    });
-    svg.attr_with("height", |attr| {
-        attr.push_num(size.y.to_pt());
-        attr.push_str("pt");
-    });
+    svg.attr("width", "100%");
     svg.attr("xmlns", "http://www.w3.org/2000/svg");
     svg.attr("xmlns:xlink", "http://www.w3.org/1999/xlink");
     svg.attr("xmlns:h5", "http://www.w3.org/1999/xhtml");

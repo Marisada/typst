@@ -377,6 +377,7 @@ fn export_pdf(document: &PagedDocument, config: &CompileConfig) -> SourceResult<
         page_ranges: config.pages.clone(),
         standards: config.pdf_standards.clone(),
         tagged: config.tagged,
+        signer: None,
     };
     let buffer = typst_pdf::pdf(document, &options)?;
     config
