@@ -33,6 +33,14 @@ pub fn pdf(document: &PagedDocument, options: &PdfOptions) -> SourceResult<Vec<u
     convert::convert(document, options)
 }
 
+/// Merge documents into a PDF file.
+///
+/// Returns the raw bytes making up the PDF file.
+// #[typst_macros::time(name = "merge")]
+pub fn merge(documents: &[PagedDocument], options: &PdfOptions) -> SourceResult<Vec<u8>> {
+    convert::merge(documents, options)
+}
+
 /// Settings for PDF export.
 #[derive(Debug)]
 pub struct PdfOptions<'a> {

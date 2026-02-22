@@ -585,8 +585,8 @@ a86fb8f7772c38965099c81caab02d9d image-baseline-with-box
 8a9941a1da0b3830b7224c5c39983bcc image-natural-dpi-sizing
 3417bb36a9a4639c3591a942535f1d9f image-pdf-base14-fonts
 05d38465aa1d349c16d994267e4abc6c image-pdf-basic
-557e9c86dea73b26a0374da46d0bfa2c image-pdf-complex
-f9b1f52b0bcf935eedb99f0f430e7a62 image-pdf-multiple-pages
+0c4dc828cdb2b57e6f3f37a0a3072392 image-pdf-complex
+2e0c5ecadbba1a91fee0471e596b92fc image-pdf-multiple-pages
 57f74dd11c17258bc72fdb660e80d0df image-pixmap-luma8
 0c12c6eb42bab945a4fbe0e72e2a89db image-pixmap-lumaa8
 b6fe86d8364623948668448c9a859c21 image-pixmap-rgb8
