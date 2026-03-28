@@ -14,6 +14,7 @@ mod text;
 mod util;
 
 pub use self::metadata::{Timestamp, Timezone};
+pub use krilla::metadata::PdfSig;
 
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
@@ -35,6 +36,14 @@ use typst_library::model::LateLinkResolver;
 #[typst_macros::time(name = "pdf")]
 pub fn pdf(document: &PagedDocument, options: &PdfOptions) -> SourceResult<Vec<u8>> {
     convert::convert(document, options, &[], None)
+}
+
+/// Merge documents into a PDF file.
+///
+/// Returns the raw bytes making up the PDF file.
+// #[typst_macros::time(name = "merge")]
+pub fn merge(documents: &[PagedDocument], options: &PdfOptions) -> SourceResult<Vec<u8>> {
+    convert::merge(documents, options)
 }
 
 /// Export a document into a PDF file as part of a bundle.
@@ -81,6 +90,7 @@ pub struct PdfOptions<'a> {
     /// circumstances, for example when trying to reduce the size of a document,
     /// it can be desirable to disable tagged PDF.
     pub tagged: bool,
+    pub signer: Option<PdfSig>,
 }
 
 impl PdfOptions<'_> {
@@ -99,6 +109,7 @@ impl Default for PdfOptions<'_> {
             page_ranges: None,
             standards: PdfStandards::default(),
             tagged: true,
+            signer: None,
         }
     }
 }

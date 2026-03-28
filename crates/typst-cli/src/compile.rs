@@ -397,6 +397,7 @@ fn pdf_options(config: &CompileConfig) -> PdfOptions<'static> {
         page_ranges: config.pages.clone(),
         standards: config.pdf_standards.clone(),
         tagged: config.tagged,
+        signer: None,
     }
 }
 
