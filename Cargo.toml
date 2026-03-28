@@ -82,11 +82,11 @@ kamadak-exif = "0.6"
 # krilla = { git = "https://github.com/LaurenzV/krilla", rev = "88483e2", default-features = false, features = ["raster-images", "comemo", "rayon", "pdf"] }
 # krilla-svg = { git = "https://github.com/LaurenzV/krilla", rev = "88483e2" }
 
-krilla = { path = "../krilla/crates/krilla/", default-features = false, features = ["raster-images", "comemo", "rayon", "pdf"] }
-krilla-svg = { path = "../krilla/crates/krilla-svg/" }
+krilla = { git = "https://codeberg.org/Marisada/krilla", default-features = false, features = ["raster-images", "comemo", "rayon", "pdf"] }
+krilla-svg = { git = "https://codeberg.org/Marisada/krilla" }
 
-# krilla = { git = "https://github.com/Marisada/krilla", default-features = false, features = ["raster-images", "comemo", "rayon", "pdf"] }
-# krilla-svg = { git = "https://github.com/Marisada/krilla" }
+# krilla = { path = "../krilla/crates/krilla/", default-features = false, features = ["raster-images", "comemo", "rayon", "pdf"] }
+# krilla-svg = { path = "../krilla/crates/krilla-svg/" }
 
 kurbo = "0.12"
 libfuzzer-sys = "0.4"
