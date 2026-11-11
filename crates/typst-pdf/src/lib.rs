@@ -19,6 +19,7 @@ pub use self::format::{
     PdfStandard, PdfStandards,
 };
 pub use self::metadata::{Timestamp, Timezone};
+pub use krilla::metadata::PdfSig;
 
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -44,6 +45,15 @@ pub fn pdf(
     let mut warnings = EcoVec::new();
     let output = convert::convert(document, options, &[], None, &mut warnings);
     Warned { output, warnings }
+}
+
+/// Merge documents into a PDF file.
+///
+/// Returns the raw bytes making up the PDF file.
+#[typst_macros::time(name = "merge")]
+pub fn merge(documents: &[PagedDocument], options: &PdfOptions) -> SourceResult<Vec<u8>> {
+    let mut warnings = EcoVec::new();
+    convert::merge(documents, options, &mut warnings)
 }
 
 /// Export a document into a PDF file as part of a bundle.
@@ -88,6 +98,7 @@ pub struct PdfOptions<F: Fields = Partial> {
     pub timestamp: Option<Timestamp>,
     /// Format options that override the defaults set by the document.
     pub format: PdfFormatOptions<F>,
+    pub signer: Option<PdfSig>,
 }
 
 impl PdfOptions {
@@ -147,6 +158,7 @@ impl PdfOptions {
             creator: self.creator.clone(),
             timestamp: self.timestamp,
             format,
+            signer: self.signer.clone(),
         })
     }
 }

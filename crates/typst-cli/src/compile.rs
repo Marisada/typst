@@ -668,6 +668,7 @@ fn pdf_options(config: &CompileConfig) -> PdfOptions {
             tagged: config.tagged.map(Smart::Custom),
             pretty: config.pretty,
         },
+        signer: None,
     }
 }
 
